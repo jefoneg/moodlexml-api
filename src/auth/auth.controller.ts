@@ -1,34 +1,37 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { AllowAnonymous, Public } from '@thallesp/nestjs-better-auth';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { SignInDto } from './dto/signin.dto';
+import { SignUpDto } from './dto/signup.dto';
 
-@Controller('auth')
+@Controller({ version: '1', path: 'account' })
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post()
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
+  @AllowAnonymous()
+  @Post('signup')
+  async signUp(@Body() dto: SignUpDto, @Res() res: Response) {
+    const r = await this.authService.signup(dto);
+    return this.authService.forward(res, r);
   }
 
-  @Get()
-  findAll() {
-    return this.authService.findAll();
+  @AllowAnonymous()
+  @Post('signin')
+  async signIn(@Body() dto: SignInDto, @Res() res: Response) {
+    const r = await this.authService.signin(dto);
+    return this.authService.forward(res, r);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
+  @Post('signout')
+  async signOut(@Req() req: Request, @Res() res: Response) {
+    const r = await this.authService.signOut(req);
+    return this.authService.forward(res, r);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(+id, updateAuthDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authService.remove(+id);
+  @Get('session')
+  async session(@Req() req: Request, @Res() res: Response) {
+    const r = await this.authService.getSession(req);
+    return this.authService.forward(res, r);
   }
 }
