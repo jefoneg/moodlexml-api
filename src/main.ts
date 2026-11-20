@@ -4,9 +4,7 @@ import { AppModule } from './app.module';
 import { VersioningType } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    bodyParser: false,
-  });
+  const app = await NestFactory.create(AppModule);
 
   app.enableCors({ origin: 'http://localhost:3000', credentials: true });
 

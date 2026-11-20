@@ -1,8 +1,8 @@
 # Moodle XML Generator API
 
 The backend API for the AI Moodle XML Generator. It provides account and session
-authentication for the frontend using NestJS, Better Auth, and PostgreSQL. Quiz
-generation and Moodle XML export are not implemented by this API yet.
+authentication and AI-powered quiz generation for the frontend using NestJS,
+Better Auth, PostgreSQL, and the Gemini API.
 
 ## Features
 
@@ -11,6 +11,7 @@ generation and Moodle XML export are not implemented by this API yet.
 - Session and authentication cookies forwarded to the client.
 - PostgreSQL persistence through Prisma.
 - Better Auth's built-in routes mounted at `/api/auth`.
+- Gemini-powered quiz generation with Moodle XML and preview data.
 
 On sign-up, email verification is enabled, but the current verification callback
 only logs the verification URL; email delivery is not configured.
@@ -42,12 +43,14 @@ BETTER_AUTH_URL=http://localhost:3001
 BETTER_AUTH_SECRET=replace_with_a_long_random_secret
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
 GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
 PORT=3001
 ```
 
 `DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, and the Google OAuth
-credentials are used by the current application configuration. Keep secrets
-private and do not commit `.env`.
+credentials are used by the application. `GEMINI_API_KEY` and `GEMINI_MODEL`
+configure quiz generation. Keep secrets private and do not commit `.env`.
 
 Create the PostgreSQL database, then apply its migrations and generate the
 Prisma client:
@@ -92,6 +95,31 @@ The API currently allows credentialed CORS requests from
 deployment, update the CORS origin in `src/main.ts` and the trusted origin in
 `src/auth/auth.module.ts` to match the deployed frontend.
 
+## Quiz Generation API
+
+`POST /api/v1/prompt/generate` sends questions and answer keys to the configured
+Gemini model. Both `questions` and `answerKeys` should be strings. The request
+body nests them under `prompt`:
+
+```json
+{
+  "prompt": {
+    "questions": "1. What is 2 + 2?\n2. Explain photosynthesis.",
+    "answerKeys": "1. 4"
+  }
+}
+```
+
+Provide clearly separated or numbered questions and answer keys when possible.
+The model is instructed to produce a JSON object containing Moodle XML and
+matching preview data. The endpoint returns the model's response text; review
+the generated content before importing it into Moodle.
+
+The prompt asks Gemini to infer missing multiple-choice and true/false answers
+and generate acceptable answers for short-answer questions. For essay
+questions without an expected answer, it avoids inventing an overly restrictive
+grading answer. These are model-generated results and may need verification.
+
 ## Tests
 
 ```bash
@@ -108,6 +136,6 @@ npm run test:cov
 ## Data Handling
 
 Account, session, and verification records are stored in the configured
-PostgreSQL database. Authentication requests are handled by Better Auth. This
-API does not currently accept quiz questions or answer keys, or send them to an
-AI provider.
+PostgreSQL database. Authentication requests are handled by Better Auth.
+Questions and answer keys submitted to the generation endpoint are sent to
+Google's Gemini API for processing; do not submit sensitive information.
